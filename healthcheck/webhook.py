@@ -17,11 +17,14 @@ slackClient = WebClient(token=slack_token)
 db_host = os.getenv('DB_HOST')
 db_user = os.getenv('DB_USER')
 db_pass = os.getenv('DB_PASS')
+db_name = os.getenv("DB_NAME")
+slack_channel = os.getenv('SLACK_CHANNEL')
+
 db = mysql.connector.connect(
 	host=db_host,
 	user=db_user,
 	passwd=db_pass,
-	database="dbname"
+	database=db_name
 )
 cursor = db.cursor(dictionary=True)
 
@@ -35,9 +38,12 @@ def mainRoute():
 	applicationName = responseUrl['incident']['resource']['labels']['host']
 	alertState = responseUrl['incident']['state']
 	
+	responseJson = {
+		"Application name": applicationName,
+		"Alert State": alertState
+	}
 
 	if alertState == "open":
-		print("Service Down")
 		slackBlockMessageDown = [
 		{
 			"type": "divider"
@@ -53,7 +59,7 @@ def mainRoute():
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Applicaton Name:*\n" + applicationName
+				"text": "*Application Name:*\n" + applicationName
 			}
 		},
 		{
@@ -61,7 +67,7 @@ def mainRoute():
 		}
 		]
 		sendSlackNotif = slackClient.chat_postMessage(
-			channel="xxx",
+			channel=slack_channel,
 			text="Service Down: "+applicationName,
 			blocks=slackBlockMessageDown
 		)
@@ -73,8 +79,7 @@ def mainRoute():
 		print("function 1 - cek db")
 
 	else:
-		print("Service UP")
-		# fetch function
+		# get application state from database
 		fetchSql = "select slack_thread_id from monitoring where alert_state='open' and application_name = %s"
 		cursor.execute(fetchSql, (applicationName,))
 		allResult = cursor.fetchall()
@@ -82,11 +87,6 @@ def mainRoute():
 			result["slack_thread_id"]
 		
 		getSlackThreadId = result['slack_thread_id']
-		
-		print("======================================")
-
-		print("dari function retry")
-		print("slack thread id: "+getSlackThreadId)        
 		
 		slackBlockMessageUP = [
 		{
@@ -103,7 +103,7 @@ def mainRoute():
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Applicaton Name:*\n" + applicationName + " :verified:"
+				"text": "*Application Name:*\n" + applicationName + " :verified:"
 			}
 		},
 		{
@@ -112,26 +112,19 @@ def mainRoute():
 		]
 
 		sendSlackReply = slackClient.chat_update(
-			channel="xxx",
+			channel=slack_channel,
 			ts=getSlackThreadId,
 			text="Service returned to Normal state: "+applicationName,
 			blocks=slackBlockMessageUP
 		)
 
-		# update function
-		print("thread id: "+getSlackThreadId)
+		# update database when service back to normal
 		updateSQL = """update monitoring set alert_state = 'closed' where slack_thread_id = %s """
 		cursor.execute(updateSQL, (getSlackThreadId,))
-
-		# updateSQL = """update monitoring set alert_state = "closed" where slack_thread_id = "1672039865.453219" """		
-		# cursor.execute(updateSQL)
 		db.commit()
 
-	responseJson = {
-		"Application name": applicationName
-	}
+
 	return json.dumps(responseJson)
-	# return applicationName
 
 	
 if __name__ == '__main__':
