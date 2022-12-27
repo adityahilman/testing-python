@@ -1,14 +1,12 @@
-import boto3
-import json
-import datetime
 import os
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
-from botocore.exceptions import ClientError
 import httpx
 import asyncio
 import mysql.connector
 import time
+import datetime
+import requests
+
+
 
 # db connector
 db_host = os.getenv('DB_HOST')
@@ -24,46 +22,93 @@ db = mysql.connector.connect(
 )
 cursor = db.cursor(dictionary=True)
 
+
 async def first_check():
-	getAppList = "select * from list_application where application_health_status = 1"
+	#time.sleep(2)
 	
+	getAppList = "select * from list_application where application_health_status = 1"
 	cursor.execute(getAppList)
 	allResult = cursor.fetchall()
+	await asyncio.sleep(5)
+	timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+	print("-------------------------------------------"+timestamp)
 	for appList in allResult:
 		#print(appList["application_url"])
 		async with httpx.AsyncClient() as client:
 			getAppHealthCheck = await client.get(appList["application_url"])
-			#getAppHealthCheck = httpx.get(appList["application_url"])
-		print(getAppHealthCheck.url,getAppHealthCheck.status_code)
+		
+		print("First check : ", getAppHealthCheck.url, getAppHealthCheck.status_code)
 		if getAppHealthCheck.status_code != 200:
 			applicationUrl = str(getAppHealthCheck.url)
 			updateApplist = "update list_application set application_health_status = 0 where application_url = %s"
 			cursor.execute(updateApplist, (applicationUrl,))
 			db.commit()
-			print("call function retryAppCheck")
-			
-	second_check()
-	return appList["application_url"]
+			time.sleep(2)
+			failedApp = httpx.get(applicationUrl)
+			if failedApp.status_code != 200:
+				print("service failed after ",timestamp,",", applicationUrl)
+				sendRequest = {
+					"incident": {
+						"state": "open",
+						"resource": {
+							"labels": {
+								"host": applicationUrl
+							}
+						}
+					}		
+				}
+				postRequest = requests.post("http://localhost:8000/gcp-webhook", json=sendRequest)
+				print(postRequest.content)
 
-def second_check():
-	time.sleep(3)
+			#print("1st check - service down: "+applicationUrl)
+
+	print("-------------------------------------------")
+
+	
+
+async def second_check():
+	
 	getRetryAppList = "select application_url from list_application where application_health_status = 0"
 	cursor.execute(getRetryAppList)
 	retryAllResult = cursor.fetchall()
+	await asyncio.sleep(5)
+	timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+
 	for retryAppList in retryAllResult:
-		print(retryAppList["application_url"])
+
 		resultAppList = httpx.get(retryAppList["application_url"])
 		if resultAppList.status_code == 200:
 			retryAppUrl = str(resultAppList.url)
-			updateRetryApp = "update list_application set application_healh_status = 1 where application_url = %s"
-			cursor.execute(updateRetryApp, (retryAppList,) )
+			updateRetryApp = "update list_application set application_health_status = 1 where application_url = %s"
+			cursor.execute(updateRetryApp, (retryAppUrl,) )
 			db.commit()
-		print("=========================================")
-		print("result from function retry second_check")
-		print(resultAppList.url, resultAppList.status_code)
+			print("2nd check - service back to normal: "+retryAppUrl)
+			sendRequest = {
+				"incident": {
+					"state": "closed",
+					"resource": {
+						"labels": {
+							"host": retryAppUrl
+						}
+					}
+				}		
+			}
+			postRequest = requests.post("http://localhost:8000/gcp-webhook", json=sendRequest)
+			print(postRequest.content)
+
 		
+		else:
+			print("======================================="+timestamp)
+			print("Service down after 2s : "+str(resultAppList.url))
+			print("=========================================")
+		# print("Second check : ",resultAppList.url, resultAppList.status_code)
+		
+async def main():
+	task_first_check = asyncio.create_task(first_check())
+	task_second_check = asyncio.create_task(second_check())
+	await asyncio.wait([task_first_check, task_second_check])
 
-while True:
-	asyncio.run(first_check())
 
-#asyncio.run(appCheck())
+if __name__ == "__main__":
+	while True:
+		asyncio.run(main())
