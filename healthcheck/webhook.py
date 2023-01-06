@@ -30,12 +30,47 @@ cursor = db.cursor(dictionary=True)
 
 app = Flask(__name__)
 
-@app.route('/gcp-webhook', methods=['POST'])
-def mainRoute():
+@app.route("/", methods = ['GET'])
+def getHome():
+	response = {
+		"Status": "OK"
+	}
+	return json.dumps(response)
 
-	insertSql = "insert into monitoring (application_name, slack_thread_id, alert_state) values (%s, %s, %s)"
+@app.route("/3", methods = ['GET'])
+def getH3():
+	response = {
+		"Status": "OK"
+	}
+	return json.dumps(response)
+
+@app.route("/4", methods = ['GET'])
+def getH4():
+	response = {
+		"Status": "OK"
+	}
+	return json.dumps(response)
+
+@app.route("/5", methods = ['GET'])
+def getH5():
+	response = {
+		"Status": "OK"
+	}
+	return json.dumps(response)	
+
+
+@app.route('/healthcheck-webhook', methods=['POST'])
+def mainRoute():
+	startDowntime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+	insertSql = "insert into monitoring (application_name, slack_thread_id, alert_state, start_downtime, end_downtime) values (%s, %s, %s, %s, 0)"
 	responseUrl = request.json
+	
+	#print("json payload "+responseUrl)
+
 	applicationName = responseUrl['incident']['resource']['labels']['host']
+	responseCode = responseUrl['incident']['resource']['labels']['response_code']
+	#print("app name :"+applicationName)
+
 	alertState = responseUrl['incident']['state']
 	
 	responseJson = {
@@ -46,20 +81,17 @@ def mainRoute():
 	if alertState == "open":
 		slackBlockMessageDown = [
 		{
-			"type": "divider"
-		},
-		{
-			"type": "section",
+			"type": "header",
 			"text": {
-				"type": "mrkdwn",
-				"text": ":redalert: *Service Down*"
+				"type": "plain_text",
+				"text": ":redalert: Service Down :redalert: "
 			}
 		},
 		{
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Application Name:*\n" + applicationName
+				"text": "*Application Url Healtcheck :* \n"+applicationName+"\n\n*Response Code:* \n"+responseCode
 			}
 		},
 		{
@@ -73,10 +105,9 @@ def mainRoute():
 		)
 		slackThread = sendSlackNotif['message']['ts']
 
-		insertValue = (applicationName, slackThread, alertState)
+		insertValue = (applicationName, slackThread, alertState, startDowntime)
 		cursor.execute(insertSql, insertValue)
 		db.commit()
-		print("function 1 - cek db")
 
 	else:
 		# get application state from database
@@ -90,20 +121,17 @@ def mainRoute():
 		
 		slackBlockMessageUP = [
 		{
-			"type": "divider"
-		},
-		{
-			"type": "section",
+			"type": "header",
 			"text": {
-				"type": "mrkdwn",
-				"text": "*Service returned to Normal state* :verified:"
+				"type": "plain_text",
+				"text": "Service returned to Normal state :thumbsup: "
 			}
 		},
 		{
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Application Name:*\n" + applicationName + " :verified:"
+				"text": "*Application Url Healtcheck :* \n"+applicationName+"\n\n*Response Code:* \n"+responseCode
 			}
 		},
 		{
@@ -119,8 +147,9 @@ def mainRoute():
 		)
 
 		# update database when service back to normal
-		updateSQL = """update monitoring set alert_state = 'closed' where slack_thread_id = %s """
-		cursor.execute(updateSQL, (getSlackThreadId,))
+		endDowntime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+		updateSQL = """update monitoring set alert_state = 'closed', end_downtime = %s where slack_thread_id = %s """
+		cursor.execute(updateSQL, (endDowntime,getSlackThreadId))
 		db.commit()
 
 
