@@ -26,7 +26,7 @@ cursor = db.cursor(dictionary=True)
 
 async def second_check():
 	
-	getRetryAppList = "select application_url from list_application where application_health_status = 0"
+	getRetryAppList = "select application_url from app_list where application_health_status = 0"
 	cursor.execute(getRetryAppList)
 	retryAllResult = cursor.fetchall()
 	await asyncio.sleep(5)
@@ -38,7 +38,7 @@ async def second_check():
 		if resultAppList.status_code == 200:
 			retryAppUrl = str(resultAppList.url)
 			responseCode = str(resultAppList.status_code)
-			updateRetryApp = "update list_application set application_health_status = 1 where application_url = %s"
+			updateRetryApp = "update app_list set application_health_status = 1 where application_url = %s"
 			cursor.execute(updateRetryApp, (retryAppUrl,) )
 			db.commit()
 			print("2nd check - service back to normal: "+retryAppUrl)
@@ -48,20 +48,20 @@ async def second_check():
 					"resource": {
 						"labels": {
 							"host": retryAppUrl,
-							"response_code": responseCode
+							"response_code": responseCode,
+							"timestamp": timestamp
 						}
 					}
 				}		
 			}
 			postRequest = requests.post("http://localhost:8000/healthcheck-webhook", json=sendRequest)
-			print(postRequest.content)
+			#print(postRequest.content)
 
 		
 		else:
 			print("======================================="+timestamp)
 			print("Service down after 2s : "+str(resultAppList.url))
 			print("=========================================")
-		# print("Second check : ",resultAppList.url, resultAppList.status_code)
 		
 async def main():
 	task_second_check = asyncio.create_task(second_check())

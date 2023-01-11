@@ -1,13 +1,12 @@
 from flask import Flask, render_template, request, Response
-import boto3
 import json
-import datetime
+from datetime import datetime
 import os
 from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
-from botocore.exceptions import ClientError
-
 import mysql.connector
+
+
+
 
 # slack config
 slack_token = os.getenv('SLACK_TOKEN')
@@ -37,6 +36,13 @@ def getHome():
 	}
 	return json.dumps(response)
 
+@app.route("/2", methods = ['GET'])
+def getH2():
+	response = {
+		"Status": "OK"
+	}
+	return json.dumps(response)
+
 @app.route("/3", methods = ['GET'])
 def getH3():
 	response = {
@@ -61,16 +67,12 @@ def getH5():
 
 @app.route('/healthcheck-webhook', methods=['POST'])
 def mainRoute():
-	startDowntime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-	insertSql = "insert into monitoring (application_name, slack_thread_id, alert_state, start_downtime, end_downtime) values (%s, %s, %s, %s, 0)"
+	startDowntime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+	insertSql = "insert into app_healthcheck (application_name, slack_thread_id, alert_state, down_at, up_at) values (%s, %s, %s, %s, 0)"
 	responseUrl = request.json
 	
-	#print("json payload "+responseUrl)
-
 	applicationName = responseUrl['incident']['resource']['labels']['host']
 	responseCode = responseUrl['incident']['resource']['labels']['response_code']
-	#print("app name :"+applicationName)
-
 	alertState = responseUrl['incident']['state']
 	
 	responseJson = {
@@ -79,11 +81,12 @@ def mainRoute():
 	}
 
 	if alertState == "open":
+		# send slack message
 		slackBlockMessageDown = [
 		{
-			"type": "header",
+			"type": "section",
 			"text": {
-				"type": "plain_text",
+				"type": "mrkdwn",
 				"text": ":redalert: Service Down :redalert: "
 			}
 		},
@@ -91,7 +94,9 @@ def mainRoute():
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Application Url Healtcheck :* \n"+applicationName+"\n\n*Response Code:* \n"+responseCode
+				"text": "*Application Url Healtcheck :* \n"+applicationName+ \
+					"\n\n*Response Code:* \n"+responseCode+ \
+					"\n\n*Downtime at:* \n"+startDowntime
 			}
 		},
 		{
@@ -111,19 +116,54 @@ def mainRoute():
 
 	else:
 		# get application state from database
-		fetchSql = "select slack_thread_id from monitoring where alert_state='open' and application_name = %s"
+		fetchSql = "select slack_thread_id from app_healthcheck where alert_state='open' and application_name = %s"
 		cursor.execute(fetchSql, (applicationName,))
 		allResult = cursor.fetchall()
 		for result in allResult:
 			result["slack_thread_id"]
 		
 		getSlackThreadId = result['slack_thread_id']
+		endDowntime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+		# update database when service back to normal
+		updateSQL = """update app_healthcheck set alert_state = 'closed', up_at = %s where slack_thread_id = %s """
+		#updateSQL = """update app_healthcheck set alert_state = 'closed', up_at = %s, downtime_duration = %s where slack_thread_id = %s """
+		cursor.execute(updateSQL, (endDowntime,getSlackThreadId))
+		#cursor.execute(updateSQL, (endDowntime,getSlackThreadId, downtime_duration))
+
+
+		# # get restore uptime timestamp
+		getUptimeSQL = """select up_at from app_healthcheck where slack_thread_id = %s"""
+		cursor.execute(getUptimeSQL, (getSlackThreadId,))
+		resultUptime = cursor.fetchone()
+		uptime_timestamp = resultUptime['up_at']
+		up_at = datetime.strptime(uptime_timestamp, "%Y-%m-%d %H:%M:%S")
+
+		# get downtime timestamp
+		getDowntimeSQL = """select down_at from app_healthcheck where slack_thread_id = %s"""
+		cursor.execute(getDowntimeSQL, (getSlackThreadId,))
+		resultDowntime = cursor.fetchone()
+		downtime_timestamp = resultDowntime['down_at']
+		down_at = datetime.strptime(downtime_timestamp, "%Y-%m-%d %H:%M:%S")
+
+		timeDiff = up_at - down_at
+		downtime_duration = str(timeDiff)
+
+		updateDowntimeDurationSQL = """update app_healthcheck set downtime_duration = %s where slack_thread_id = %s"""
+		cursor.execute(updateDowntimeDurationSQL, (downtime_duration,getSlackThreadId))
+
 		
+
+		db.commit()
+
+		
+
+		# send slack message
 		slackBlockMessageUP = [
 		{
-			"type": "header",
+			"type": "section",
 			"text": {
-				"type": "plain_text",
+				"type": "mrkdwn",
 				"text": "Service returned to Normal state :thumbsup: "
 			}
 		},
@@ -131,7 +171,10 @@ def mainRoute():
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Application Url Healtcheck :* \n"+applicationName+"\n\n*Response Code:* \n"+responseCode
+				"text": "*Application Url Healtcheck :* \n"+applicationName+ \
+					"\n\n*Response Code:* \n"+responseCode+ \
+					"\n\n*Back to normal at:* \n"+endDowntime+
+					"\n\n*Downtime duration: * \n"+downtime_duration
 			}
 		},
 		{
@@ -145,14 +188,11 @@ def mainRoute():
 			text="Service returned to Normal state: "+applicationName,
 			blocks=slackBlockMessageUP
 		)
-
-		# update database when service back to normal
-		endDowntime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-		updateSQL = """update monitoring set alert_state = 'closed', end_downtime = %s where slack_thread_id = %s """
-		cursor.execute(updateSQL, (endDowntime,getSlackThreadId))
-		db.commit()
+		
+		print("Duration downtime: ",str(timeDiff))
 
 
+	
 	return json.dumps(responseJson)
 
 	

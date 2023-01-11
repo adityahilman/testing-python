@@ -27,7 +27,7 @@ cursor = db.cursor(dictionary=True)
 async def first_check():
 	#time.sleep(2)
 	
-	getAppList = "select * from list_application where application_health_status = 1"
+	getAppList = "select * from app_list where application_health_status = 1"
 	cursor.execute(getAppList)
 	allResult = cursor.fetchall()
 	await asyncio.sleep(5)
@@ -41,27 +41,28 @@ async def first_check():
 		print("First check : ", getAppHealthCheck.url, getAppHealthCheck.status_code)
 		if getAppHealthCheck.status_code != 200:
 			applicationUrl = str(getAppHealthCheck.url)
-			updateApplist = "update list_application set application_health_status = 0 where application_url = %s"
+			updateApplist = "update app_list set application_health_status = 0 where application_url = %s"
 			cursor.execute(updateApplist, (applicationUrl,))
 			db.commit()
-			time.sleep(2)
+			time.sleep(3)
 			failedApp = httpx.get(applicationUrl)
 			if failedApp.status_code != 200:
 				responseCode = str(failedApp.status_code)
-				print("service failed after ",timestamp,",", applicationUrl)
+				print("retry at ",timestamp,",", applicationUrl)
 				sendRequest = {
 					"incident": {
 						"state": "open",
 						"resource": {
 							"labels": {
 								"host": applicationUrl,
-								"response_code": responseCode
+								"response_code": responseCode,
+								"timestamp": timestamp
 							}
 						}
 					}		
 				}
 				postRequest = requests.post("http://localhost:8000/healthcheck-webhook", json=sendRequest)
-				print(postRequest.content)
+				return postRequest
                 
 	print("-------------------------------------------")
 
