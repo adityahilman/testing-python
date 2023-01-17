@@ -10,7 +10,7 @@ def getHome():
 	}
 	return json.dumps(response)
 
-@app.route("/2s", methods = ['GET'])
+@app.route("/2", methods = ['GET'])
 def getlocal2():
 	response = {
 		"Status": "OK"

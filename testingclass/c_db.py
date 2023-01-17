@@ -23,7 +23,6 @@ class DatabaseClient:
         self.alert_state = alert_state
         self.incident_time = incident_time
         self.recovered_time = recovered_time
-        self.insertAppStatus()
 
 
     def getAppList(self):
@@ -36,12 +35,17 @@ class DatabaseClient:
 
     
 
-    #def insertAppStatus(self, app_url, slack_thread_id, alert_state, incident_time: str, recovered_time: str=None):
-    def insertAppStatus(self):
-        #print("from class db: ",self.app_url, self.slack_thread_id, self.alert_state, self.incident_time)
-        insertAppStatus = "insert into app_healthcheck (application_url, slack_thread_id, alert_state, incident_at, recovered_at) values (%s, %s, %s, %s, 0)"
-        DatabaseClient.cursor.execute(insertAppStatus, (self.app_url,self.slack_thread_id, self.alert_state, self.incident_time))
-        DatabaseClient.connect.commit()
+    def insertAppStatus(self, app_url, slack_thread_id, alert_state, incident_time: str, recovered_time: str=None):
+    #def insertAppStatus(self):
+        self.app_url = app_url
+        self.slack_thread_id = slack_thread_id
+        self.alert_state = alert_state
+        self.incident_time = incident_time
+        self.recovered_time = recovered_time
+        print("from class db: ",self.app_url, self.slack_thread_id, self.alert_state, self.incident_time)
+        # insertAppStatus = "insert into app_healthcheck (application_url, slack_thread_id, alert_state, incident_at, recovered_at) values (%s, %s, %s, %s, 0)"
+        # DatabaseClient.cursor.execute(insertAppStatus, (self.app_url,self.slack_thread_id, self.alert_state, self.incident_time))
+        # DatabaseClient.connect.commit()
 
     
     def updateAppStatus(self, app_url):

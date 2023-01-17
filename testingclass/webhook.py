@@ -19,18 +19,18 @@ def healthcheckWebhook():
     app_url = jsonPost['incident']['resource']['labels']['host']
     response_code = jsonPost['incident']['resource']['labels']['response_code']
     alert_state = jsonPost['incident']['state'] 
-    print(slack_channel)
+    #print(slack_channel)
 
     if alert_state == "open":
         sendSlackNotif = SlackClient(app_url, str(incident_time), slack_channel, response_code)
+        sendSlackNotif.sendSlackDown()
         
         # insert incident to database
-        insert_to_db = DatabaseClient(app_url,sendSlackNotif.slack_thread_id, alert_state, incident_time)
-
-        # insert_to_db = Test(app_url,sendSlackNotif.slack_thread_id, alert_state, incident_time)
-
-        
+        insert_to_db = DatabaseClient()
+        insert_to_db.insertAppStatus(app_url,sendSlackNotif.slack_thread_id, alert_state, incident_time)
+    
     else:
+        # if alert_state == "closed"
         print("closed")
     return json.dumps(jsonPost)
 

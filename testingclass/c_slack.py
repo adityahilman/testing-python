@@ -6,14 +6,15 @@ class SlackClient:
 
     slack_token = os.getenv('SLACK_TOKEN')
     slackClient = WebClient(token=slack_token)
+    slack_thread_id = ""
     
 
-    def __init__(self, app_url:str=None, incident_time: str=None, slack_channel=None, response_code=None):
+    def __init__(self, app_url:str=None, incident_time: str=None, slack_channel=None, response_code=None, slack_thread_id=None):
         self.app_url = app_url
         self.incident_time = incident_time
         self.slack_channel = slack_channel
         self.response_code = response_code
-        self.sendSlackDown()
+        self.slack_thread_id = slack_thread_id
         
 
     #def sendSlackDown(self, app_url, incident_time:str, slack_channel):

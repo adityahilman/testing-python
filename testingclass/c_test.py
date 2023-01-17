@@ -1,5 +1,6 @@
 from slack_sdk import WebClient
 import os
+from datetime import datetime
 
 class SlackTest():
     slack_token = os.getenv('SLACK_TOKEN')
@@ -23,13 +24,24 @@ class SlackTest():
 
 class Test():
 
-    def __init__(self, app_url=None, slack_thread_id=None, alert_state=None, incident_time=None, recovered_time=None ):
-        self.app_url = app_url
-        self.slack_thread_id = slack_thread_id
-        self.alert_state = alert_state
-        self.incident_time = incident_time
-        self.recovered_time = recovered_time
-        self.f_test()
+    var1 = ""
 
-    def f_test(self):
-        print("from test class db: ",self.app_url, self.slack_thread_id, self.alert_state, self.incident_time)
+    def __init__(self, app_url=None, incident_time:str=None, slack_channel=None, response_code=None):
+        self.app_url = app_url
+        self.incident_time = incident_time
+        self.slack_channel = slack_channel
+        self.response_code = response_code
+
+    def first_test(self):
+        self.var1 = SlackTest.slack_token
+        #print(self.var1)
+        
+
+    def second_test(self, app_url=None, incident_time:str=None, slack_channel=None, response_code=None):
+        self.app_url = app_url
+        self.incident_time = incident_time
+        self.slack_channel = slack_channel
+        self.response_code = response_code
+        print(self.app_url, self.incident_time, self.slack_channel, self.response_code)
+
+
