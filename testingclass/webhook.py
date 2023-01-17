@@ -3,6 +3,8 @@ import json
 import requests
 from datetime import datetime
 from c_slack import SlackClient
+from c_db import DatabaseClient
+from c_test import Test
 import os
 
 slack_channel = os.getenv('SLACK_CHANNEL')
@@ -12,15 +14,26 @@ app = Flask(__name__)
 @app.route('/healthcheck-webhook', methods=['POST'])
 def healthcheckWebhook():
     jsonPost = request.json
-    incidentTime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    incident_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     app_url = jsonPost['incident']['resource']['labels']['host']
     response_code = jsonPost['incident']['resource']['labels']['response_code']
-    alert_state = jsonPost['incident']['state']
+    alert_state = jsonPost['incident']['state'] 
+    print(slack_channel)
 
     if alert_state == "open":
-        sendSlackNotif = SlackClient(slack_channel, app_url, 0)
-        sendSlackNotif.sendSlackDown()
+        sendSlackNotif = SlackClient(app_url, str(incident_time), slack_channel, response_code)
+        
+        # insert incident to database
+        insert_to_db = DatabaseClient(app_url,sendSlackNotif.slack_thread_id, alert_state, incident_time)
+
+        # insert_to_db = Test(app_url,sendSlackNotif.slack_thread_id, alert_state, incident_time)
+
+        
+    else:
+        print("closed")
+    return json.dumps(jsonPost)
+
 
    
 

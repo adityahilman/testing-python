@@ -1,4 +1,5 @@
 from slack_sdk import WebClient
+from c_db import DatabaseClient
 import os
 
 class SlackClient:
@@ -6,15 +7,21 @@ class SlackClient:
     slack_token = os.getenv('SLACK_TOKEN')
     slackClient = WebClient(token=slack_token)
     
-    def __init__(self, slack_channel, app_url, slack_thread_id):
-        self.slack_channel = slack_channel
+
+    def __init__(self, app_url:str=None, incident_time: str=None, slack_channel=None, response_code=None):
         self.app_url = app_url
-        self.slack_thread_id = slack_thread_id
-        #self.slack_message = self.slack_message
+        self.incident_time = incident_time
+        self.slack_channel = slack_channel
+        self.response_code = response_code
+        self.sendSlackDown()
         
 
+    #def sendSlackDown(self, app_url, incident_time:str, slack_channel):
     def sendSlackDown(self):
-        
+        # self.app_url = app_url
+        # self.incident_time = incident_time
+        # self.slack_channel = slack_channel
+
         blockMessage = [
             {
                 "type": "section",
@@ -33,6 +40,14 @@ class SlackClient:
                     {
                         "title": "Application URL Healthcheck",
                         "value": self.app_url
+                    },
+                    {
+                        "title": "Response Code",
+                        "value": self.response_code
+                    },
+                    {
+                        "title": "Incident Time",
+                        "value": self.incident_time
                     }
                 ]
             }
@@ -40,15 +55,20 @@ class SlackClient:
 
         sendSlackNotif = SlackClient.slackClient.chat_postMessage(
 			channel=self.slack_channel,
-			text="Service Down: "+self.app_url,
+			text="Service Down",
 			blocks=blockMessage,
 			attachments=attachmentMessage
 		)
 
-        slackThreadId = sendSlackNotif['message']['ts']
-        print("Slack thread id : ", slackThreadId)
+        self.slack_thread_id = sendSlackNotif['message']['ts']
+        
 
-    def sendSlackUp(self):
+
+    def sendSlackUp(self, app_url, incident_time, slack_channel, slack_thread_id):
+        self.app_url = app_url
+        self.incident_time = incident_time
+        self.slack_channel = slack_channel
+
         # slack_token = os.getenv('SLACK_TOKEN')
         # slackClient = WebClient(token=slack_token)
         blockMessage = [

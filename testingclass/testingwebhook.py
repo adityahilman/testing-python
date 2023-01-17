@@ -24,6 +24,20 @@ def getlocal3():
 	}
 	return json.dumps(response)
 
+@app.route("/4", methods = ['GET'])
+def getlocal4():
+	response = {
+		"Status": "OK"
+	}
+	return json.dumps(response)
+
+@app.route("/5", methods = ['GET'])
+def getlocal5():
+	response = {
+		"Status": "OK"
+	}
+	return json.dumps(response)
+
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', port=8000, debug=True)
