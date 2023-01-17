@@ -65,10 +65,12 @@ class SlackClient:
         
 
 
-    def sendSlackUp(self, app_url, incident_time, slack_channel, slack_thread_id):
+    def sendSlackUp(self, app_url, incident_time, slack_channel, slack_thread_id, recovered_time):
         self.app_url = app_url
         self.incident_time = incident_time
         self.slack_channel = slack_channel
+        self.slack_thread_id = slack_thread_id
+        self.recovered_time = recovered_time
 
         # slack_token = os.getenv('SLACK_TOKEN')
         # slackClient = WebClient(token=slack_token)
@@ -89,7 +91,19 @@ class SlackClient:
                 "fields": [
                     {
                         "title": "Application URL Healthcheck",
-                        "value": self.app_name
+                        "value": self.app_url
+                    },
+                    {
+                        "title": "Response Code",
+                        "value": self.response_code
+                    },
+                    {
+                        "title": "Incident Time",
+                        "value": self.incident_time
+                    },
+                    {
+                        "title": "Recovered Time",
+                        "value": self.recovered_time
                     }
                 ]
             }
