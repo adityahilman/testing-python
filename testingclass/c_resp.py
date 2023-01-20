@@ -1,11 +1,10 @@
 import requests
 
 class jsonPayload:
-    def __init__(self, app_url:str, response_code, timestamp):
+    def __init__(self, app_url:str, response_code, timestamp:str):
         self.app_url = app_url
         self.response_code = response_code
         self.timestamp = timestamp
-
         
 
     def jsonDown(self):

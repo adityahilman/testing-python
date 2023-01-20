@@ -10,6 +10,8 @@ import os
 slack_channel = os.getenv('SLACK_CHANNEL')
 
 app = Flask(__name__)
+db_client = DatabaseClient()
+slack_client = SlackClient()
 
 @app.route('/healthcheck-webhook', methods=['POST'])
 def healthcheckWebhook():
@@ -22,28 +24,37 @@ def healthcheckWebhook():
     #print(slack_channel)
 
     if alert_state == "open":
-        sendSlackNotif = SlackClient(app_url, str(incident_time), slack_channel, response_code)
-        sendSlackNotif.sendSlackDown()
+        # sendSlackNotif = SlackClient(app_url, str(incident_time), slack_channel, response_code)
+        slack_client.sendSlackDown(app_url, str(incident_time), slack_channel, response_code)
         
         # insert incident to database
-        insert_to_db = DatabaseClient()
-        insert_to_db.insertAppStatus(app_url,sendSlackNotif.slack_thread_id, alert_state, incident_time)
+        db_client.insertAppStatus(app_url,slack_client.slack_thread_id, alert_state, incident_time)
     
     else:
-        get_slack_thread_id = DatabaseClient()
-        get_slack_thread_id.getSlackThreadId(app_url)
-        all_result = DatabaseClient.cursor.fetchall()
-        for result in all_result:
-            result["slack_thread_id"]
+        print("app url :",app_url)
+        # get_slack_thread_id = DatabaseClient()
+        # all_result = db_client.getSlackThreadId(app_url)
+        # for result in all_result:
+        #     result["slack_thread_id"]
 
-        slack_thread_id = result["slack_thread_id"]
+        # slack_thread_id = result["slack_thread_id"]
+        # history_incident_time = result["incident_at"]
+        get_incident_time = db_client.getSlackThreadId(app_url)
+        for result_incident_time in get_incident_time:
+            history_incident_time = result_incident_time["incident_at"]
+            slack_thread_id = result_incident_time["slack_thread_id"]
+        
+        # print("history incident time: ", history_incident_time)
+        # print("closed slack thread id dari webhook: ",slack_thread_id)
         recovered_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        update_to_db = DatabaseClient()
-        update_to_db.updateAppStatus(app_url, slack_thread_id, str(recovered_time))
+
+        # update to database
+        db_client.updateAppAlertState(app_url, slack_thread_id, str(recovered_time))
+
         # if alert_state == "closed"
-        sendSlackNotif = SlackClient(app_url, incident_time, slack_channel, slack_thread_id, str(recovered_time))
-        sendSlackNotif.sendSlackUp()
-        print("closed")
+        # sendSlackNotif = SlackClient()
+        slack_client.sendSlackUp(app_url, history_incident_time, slack_channel, slack_thread_id, str(recovered_time), response_code)
+        # print("closed")
     return json.dumps(jsonPost)
 
 

@@ -24,7 +24,7 @@ def getlocal3():
 	}
 	return json.dumps(response)
 
-@app.route("/4s", methods = ['GET'])
+@app.route("/4", methods = ['GET'])
 def getlocal4():
 	response = {
 		"Status": "OK"

@@ -31,12 +31,15 @@ async def firstCheck():
             app_url = str(get_app_status.url)
 
             # update to database
-            update_app_status = DatabaseClient()
-            update_app_status.updateAppStatus(app_url)
+            # update_app_status = DatabaseClient()
+            # update_app_status.updateAppStatus(app_url, "0")
+
+            get_app_list.updateAppStatus(app_url, "0")
 
             # post to webhook
             jsonPost = jsonPayload(app_url, get_app_status.status_code, str(incident_time))
             jsonPost.jsonDown()
+            print("Service Down :", get_app_status.url)
 
 
 

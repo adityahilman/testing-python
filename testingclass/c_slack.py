@@ -9,19 +9,22 @@ class SlackClient:
     slack_thread_id = ""
     
 
-    def __init__(self, app_url:str=None, incident_time: str=None, slack_channel=None, response_code=None, slack_thread_id=None):
+    # def __init__(self, app_url:str=None, incident_time: str=None, slack_channel=None, response_code=None, slack_thread_id=None):
+    def __init__(self):
+        pass
+        # self.app_url = app_url
+        # self.incident_time = incident_time
+        # self.slack_channel = slack_channel
+        # self.response_code = response_code
+        # self.slack_thread_id = slack_thread_id
+        
+
+    #def sendSlackDown(self, app_url, incident_time:str, slack_channel):
+    def sendSlackDown(self, app_url:str=None, incident_time: str=None, slack_channel=None, response_code=None ):
         self.app_url = app_url
         self.incident_time = incident_time
         self.slack_channel = slack_channel
         self.response_code = response_code
-        self.slack_thread_id = slack_thread_id
-        
-
-    #def sendSlackDown(self, app_url, incident_time:str, slack_channel):
-    def sendSlackDown(self):
-        # self.app_url = app_url
-        # self.incident_time = incident_time
-        # self.slack_channel = slack_channel
 
         blockMessage = [
             {
@@ -65,12 +68,15 @@ class SlackClient:
         
 
 
-    def sendSlackUp(self, app_url, incident_time, slack_channel, slack_thread_id, recovered_time):
+    #def sendSlackUp(self, app_url, incident_time, slack_channel, slack_thread_id, recovered_time):
+    def sendSlackUp(self, app_url, incident_time, slack_channel, slack_thread_id, recovered_time, response_code):
+ 
         self.app_url = app_url
         self.incident_time = incident_time
         self.slack_channel = slack_channel
         self.slack_thread_id = slack_thread_id
         self.recovered_time = recovered_time
+        self.response_code = response_code
 
         # slack_token = os.getenv('SLACK_TOKEN')
         # slackClient = WebClient(token=slack_token)
@@ -79,7 +85,7 @@ class SlackClient:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "Service returned to normal state"
+                    "text": "Service returned to normal state :white_check_mark:"
                 }
             }
             
@@ -111,7 +117,7 @@ class SlackClient:
 
         sendSlackNotif = SlackClient.slackClient.chat_update(
 			channel=self.slack_channel,
-			text="Service Recovered: "+self.app_name,
+			text="Service Recovered: "+self.app_url,
             ts=self.slack_thread_id,
 			blocks=blockMessage,
 			attachments=attachmentMessage

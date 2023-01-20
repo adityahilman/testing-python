@@ -40,8 +40,10 @@ class DatabaseClient:
 
     def getSlackThreadId(self, app_url):
         self.app_url = app_url
-        sqlGetSlackThreadId = "select slack_thread_id from app_healthcheck where alert_state='open' and application_name = %s"
+        sqlGetSlackThreadId = "select slack_thread_id, incident_at from app_healthcheck where alert_state='open' and application_url = %s"
         DatabaseClient.cursor.execute(sqlGetSlackThreadId, (self.app_url,))
+        result_slack_thread_id = DatabaseClient.cursor.fetchall()
+        return result_slack_thread_id
     
 
     def insertAppStatus(self, app_url, slack_thread_id, alert_state, incident_time: str, recovered_time: str=None):
@@ -57,11 +59,12 @@ class DatabaseClient:
         DatabaseClient.connect.commit()
 
     
-    def updateAppStatus(self, app_url):
+    def updateAppStatus(self, app_url:str, application_health_status:int):
         self.app_url = app_url
-        print("app dari database client: ",self.app_url)
-        updateAppStatus = "update app_list set application_health_status = 0 where application_url = %s"
-        DatabaseClient.cursor.execute(updateAppStatus, (self.app_url,))
+        self.application_health_status = application_health_status
+        print("app dari database client: ",self.app_url, self.application_health_status)
+        sqlUpdateAppStatus = "update app_list set application_health_status = %s where application_url = %s"
+        DatabaseClient.cursor.execute(sqlUpdateAppStatus, (self.application_health_status, self.app_url))
         DatabaseClient.connect.commit()
         #print("Database updated")
     
@@ -72,3 +75,4 @@ class DatabaseClient:
         updateAppAlertState = "update app_healthcheck set alert_state='closed', recovered_at = %s where slack_thread_id = %s"
         DatabaseClient.cursor.execute(updateAppAlertState, (self.recovered_time, self.slack_thread_id))
         DatabaseClient.connect.commit()
+        return("dari update alert state : ",self.app_url, self.slack_thread_id, self.recovered_time)
