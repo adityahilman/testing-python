@@ -32,13 +32,7 @@ def healthcheckWebhook():
     
     else:
         print("app url :",app_url)
-        # get_slack_thread_id = DatabaseClient()
-        # all_result = db_client.getSlackThreadId(app_url)
-        # for result in all_result:
-        #     result["slack_thread_id"]
 
-        # slack_thread_id = result["slack_thread_id"]
-        # history_incident_time = result["incident_at"]
         get_incident_time = db_client.getSlackThreadId(app_url)
         for result_incident_time in get_incident_time:
             history_incident_time = result_incident_time["incident_at"]
