@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    
+        <link href='https://fonts.googleapis.com/css?family=Roboto:400,100,300,700' rel='stylesheet' type='text/css'>
+    
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        
+        <link rel="stylesheet" href="static/css/style.css">
+        <title>Application Status</title>
+      </head>
+    <body>
+        <section class="ftco-section">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-6 text-center mb-1">
+                        <h2 class="heading-section">Application Status</h2>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="table-wrap">
+                            <table class="table table-responsive-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Application URL Healthcheck</th>
+                                        <th>Application Description</th>
+                                        <th>Application Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in data %}
+                                    <tr>
+                                        <td><a href="{{result['application_url']}}">
+                                            {{result['application_url']}}</a>
+                                        </td>
+                                        <td>{{result['application_description']}}</td>
+                                        <td class="status">
+                                            {% if result['application_health_status'] == 1%} <span class="up">UP</span> {% endif %}
+                                            {% if result['application_health_status'] != 1%} <span class="down">DOWN</div> {% endif %}
+                                        
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+        </section>
+        
+       
+    </body>
+
+</html>
