@@ -1,14 +1,13 @@
 from flask import Flask, request, render_template
-from classess.db import DatabaseClient
-import os
-import mysql.connector
+from classess.testdb import DatabaseClient
 
 app = Flask(__name__)
 
-db_client = DatabaseClient()
 
 @app.route("/")
 def mainRoute():
+    db_client = DatabaseClient()
+
     data = db_client.getAllAppList()
     for result in data:
         print(result['application_url'])
